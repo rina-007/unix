@@ -1,20 +1,26 @@
 #!/bin/bash
 
-# Функция для вывода справки
-print_help() {
-  echo "Использование: $0 [ОПЦИИ] суффикс файл1 [файл2 ...]"
-  echo "Опции:"
-  echo "  -h        Вывести справку"
-  echo "  -d        Пробный запуск: показать исходные и новые имена файлов без переименования"
-  echo "  -v        Режим отладки: показывать имена переименовываемых файлов"
+# Функция вывода сообщения об ошибке и выхода
+error_exit() {
+  echo "Error: $1" >&2
+  exit 1
 }
 
-# Переменные по умолчанию
-dry_run=false
-verbose=false
+# Функция для вывода справки
+print_help() {
+  cat << EOF
+Usage: $0 [OPTIONS] suffix file1 [file2 ...]
+Options:
+  -h            Display this help message
+  -d            Dry run: Display original and new file names without renaming
+  -v            Verbose mode: Display file names being renamed
+Examples:
+  $0 -d -v sfx file1.txt file2.doc
+EOF
+}
 
-# Обработка опций
-while getopts "hdv" opt; do
+# Обработка параметров командной строки
+while getopts ":hdv" opt; do
   case $opt in
     h)
       print_help
@@ -27,52 +33,43 @@ while getopts "hdv" opt; do
       verbose=true
       ;;
     \?)
-      echo "Неверная опция: -$OPTARG" >&2
-      print_help
-      exit 1
+      error_exit "Invalid option: -$OPTARG"
       ;;
   esac
 done
 
-# Сдвигаем аргументы до первого неопционального параметра
-shift "$((OPTIND - 1))"
+# Сдвигаем опции
+shift $((OPTIND-1))
 
-# Проверяем, что суффикс указан
-if [ -z "$1" ]; then
-  echo "Ошибка: Суффикс не указан." >&2
-  print_help
-  exit 1
-fi
+# Проверяем наличие суффикса и списка файлов
+[ $# -lt 2 ] && error_exit "Missing suffix or file list. Use -h for help."
 
-suffix="$1"
+# Получаем суффикс
+suffix=$1
 shift
 
-# Проверяем, что указан хотя бы один файл
-if [ "$#" -lt 1 ]; then
-  echo "Ошибка: Нет указанных файлов для переименования." >&2
-  print_help
-  exit 1
-fi
-
-# Переименовываем файлы
+# Переименование файлов
 for file in "$@"; do
-  if [ ! -e "$file" ]; then
-    echo "Ошибка: Файл '$file' не найден." >&2
-    continue
-  fi
+  # Проверяем существование файла
+  [ -e "$file" ] || error_exit "File not found: $file"
 
-  # Создаем новое имя файла с учетом суффикса
-  new_name="${file%.*}$suffix.${file##*.}"
+  # Получаем имя файла и расширение
+  filename="${file%.*}"
+  extension="${file##*.}"
 
-  # Выводим информацию о переименовании, если включен режим отладки
-  if [ "$verbose" = true ]; then
-    echo "Переименование: $file -> $new_name"
-  fi
+  # Формируем новое имя файла
+  new_name="${filename}${suffix}.${extension}"
 
-  # Переименовываем файл, если не включен пробный запуск
+  # Выводим имена файлов при необходимости
+  [ "$verbose" = true ] && echo "Renaming: $file -> $new_name"
+
+  # Переименовываем или выводим информацию при "сухом запуске"
   if [ "$dry_run" = false ]; then
-    mv -v "$file" "$new_name"
+    mv -i "$file" "$new_name" || error_exit "Unable to rename $file"
+  else
+    echo "Dry Run: $file -> $new_name"
   fi
 done
 
 exit 0
+
