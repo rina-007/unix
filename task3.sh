@@ -36,7 +36,6 @@ done
 # Установка значений по умолчанию, если не заданы
 N="${N:--1}"
 minsize="${minsize:-1}"
-human_readable="${human_readable:--d}"
 
 # Получение списка файлов и вывод топа
-find "${@:-.}" -type f -size +"$minsize"c -exec stat -c '%s %n' {} + | sort -rn | head -n "$N"
+find "${@:-.}" -type f -size +"$minsize"c -exec stat -c '%s %n' {} + | sort -rn | head $human_readable -n "$N"
