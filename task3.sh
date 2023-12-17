@@ -38,4 +38,4 @@ N="${N:--1}"
 minsize="${minsize:-1}"
 
 # Получение списка файлов и вывод топа
-find "${@:-.}" -type f -size +"$minsize"c -exec stat -c '%s %n' {} + | sort -rn | head $human_readable -n "$N"
+find "${@:-.}" -type f -size +"$minsize"c -exec stat -c '%s %n' {} + | sort -rn | head $human_readable ${N:+-n "$N"}
